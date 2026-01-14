@@ -40,6 +40,11 @@
                     <span class="material-icons search-icon">search</span>
                     <input type="text" class="search-input" placeholder="Search state…" aria-label="Search state" />
                 </div>
+                <div class="panel-header">
+                    <button id="mapFilterBtn" class="year-filter">
+                        –
+                    </button>
+                </div>
                 <svg id="map"></svg>
             </div>
 
@@ -118,6 +123,7 @@
     </div>
 
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
     <script type="module" src="main.js"></script>
 
 </body>

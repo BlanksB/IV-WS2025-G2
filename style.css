@@ -266,7 +266,7 @@ body {
     pointer-events: none;
     opacity: 0;
     font-size: 13px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
     transition: opacity 0.15s;
     z-index: 100;
 }
@@ -304,14 +304,47 @@ body {
 }
 
 .point {
-  fill: red;
-  cursor: pointer;
-  transition: r 0.2s ease, stroke 0.2s ease;
+    fill: red;
+    cursor: pointer;
+    transition: r 0.2s ease, stroke 0.2s ease;
 }
 
 .point.selected {
-  fill: #2563eb;
-  stroke: black;
-  stroke-width: 2;
-  r: 7;
+    fill: #2563eb;
+    stroke: black;
+    stroke-width: 2;
+    r: 7;
+}
+
+.label.selected {
+    font-weight: bold;
+    fill: #2563eb;
+}
+
+.state {
+    cursor: pointer;
+}
+
+.state.selected {
+    stroke: #000;
+    stroke-width: 2px;
+}
+
+.state.highlighted {
+    stroke: #000;
+    stroke-width: 2px;
+}
+
+.legend text {
+    font-size: 11px;
+}
+
+.legend path,
+.legend line {
+    stroke: #888;
+}
+
+.state.selected {
+    stroke: #000;
+    stroke-width: 2.5px;
 }
