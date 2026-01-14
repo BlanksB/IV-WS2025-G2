@@ -174,6 +174,59 @@ class DataService {
       }));
   }
 
+    getGroupedBarData(question, mode = "sex", year = null) {
+    // 1) Start from the same filtering logic the dashboard uses
+    let filtered = this.baseFilter(question);
+
+    // Optional: respect the year filter (if a year is selected)
+    if (year !== null) {
+      filtered = filtered.filter(d => d.YearStart === year);
+    }
+
+    // 2) We want Age Group on the x-axis
+    // Age group is stored in StratificationCategory1 / Stratification1
+    filtered = filtered.filter(d =>
+      d.StratificationCategory1 === "Age Group" &&
+      d.Stratification1 &&
+      d.Stratification1 !== "Overall"
+    );
+
+    // 3) Choose inner grouping: Sex or Race/Ethnicity (in StratificationCategory2 / Stratification2)
+    if (mode === "sex") {
+      filtered = filtered.filter(d => d.StratificationCategory2 === "Sex");
+    } else {
+      filtered = filtered.filter(d =>
+        d.StratificationCategory2 &&
+        (d.StratificationCategory2.includes("Race") || d.StratificationCategory2.includes("Ethnic"))
+      );
+    }
+
+    // If nothing matches, return empty payload (chart shows "No data" message)
+    if (!filtered.length) {
+      return { ageGroups: [], categories: [], values: [] };
+    }
+
+    // 4) Group & aggregate: AgeGroup × Category → mean(Data_Value)
+    const nested = d3.rollup(
+      filtered,
+      v => d3.mean(v, d => d.Data_Value),
+      d => d.Stratification1, // Age group
+      d => d.Stratification2  // Sex / Ethnicity label
+    );
+
+    const ageGroups = Array.from(nested.keys()).sort();
+    const categories = Array.from(new Set(filtered.map(d => d.Stratification2))).sort();
+
+    const values = [];
+    for (const [age, catMap] of nested.entries()) {
+      for (const [cat, val] of catMap.entries()) {
+        values.push({ AgeGroup: age, Category: cat, Value: val });
+      }
+    }
+
+    return { ageGroups, categories, values };
+  }
+
 
 }
 
@@ -631,6 +684,201 @@ class ChoroplethChart {
 
 }
 
+//
+
+class GroupedBarChart {
+  constructor(svg, tooltip) {
+    this.svg = svg;
+    this.tooltip = tooltip;
+
+    this.width = svg.node().getBoundingClientRect().width;
+    this.height = svg.node().getBoundingClientRect().height;
+
+    // Reserve right-side legend space
+    this.margin = { top: 35, right: 170, bottom: 70, left: 60 };
+    this.innerW = this.width - this.margin.left - this.margin.right;
+    this.innerH = this.height - this.margin.top - this.margin.bottom;
+
+    svg.attr("viewBox", `0 0 ${this.width} ${this.height}`);
+
+    this.g = svg.append("g")
+      .attr("transform", `translate(${this.margin.left},${this.margin.top})`);
+
+    this.xAxisG = this.g.append("g")
+      .attr("class", "axis")
+      .attr("transform", `translate(0,${this.innerH})`);
+
+    this.yAxisG = this.g.append("g")
+      .attr("class", "axis");
+    
+    this.yLabel = svg.append("text")
+      .attr("text-anchor", "middle")
+      .attr("transform", "rotate(-90)")
+      .attr("x", -this.height / 2)
+      .attr("y", 20)
+      .text("Average Percentage");
+
+    this.xLabel = svg.append("text")
+      .attr("text-anchor", "middle")
+      .attr("x", this.margin.left + (this.innerW / 2))
+      .attr("y", this.margin.top + this.innerH + 55)
+      .text("Age Group");
+
+    this.legendG = svg.append("g")
+      .attr("class", "legend")
+      .attr("transform", `translate(${this.margin.left + this.innerW + 18}, ${this.margin.top})`);
+  }
+
+  // categorical palette (blue family)
+  makeColorScale(categories) {
+    const blues = [
+      "#1f77b4",
+      "#4e79a7",
+      "#2a5783",
+      "#6baed6",
+      "#3182bd",
+      "#9ecae1",
+      "#08519c",
+      "#2171b5",
+      "#4292c6",
+      "#bdd7e7"
+    ];
+
+    return d3.scaleOrdinal()
+      .domain(categories)
+      .range(blues);
+  }
+
+  update(payload, dimLabel) {
+    const { ageGroups, categories, values } = payload;
+
+    // Clear if no data
+    if (!values || values.length === 0) {
+      this.g.selectAll(".ageGroup").remove();
+      this.legendG.selectAll("*").remove();
+      this.title.text(`No data available for ${dimLabel} (with current filters).`);
+      this.xAxisG.call(d3.axisBottom(d3.scaleBand().range([0, this.innerW])));
+      this.yAxisG.call(d3.axisLeft(d3.scaleLinear().range([this.innerH, 0])));
+      return;
+    }
+
+    this.xLabel.text(`Age Group (grouped by ${dimLabel})`);
+
+    const x0 = d3.scaleBand()
+      .domain(ageGroups)
+      .range([0, this.innerW])
+      .paddingInner(0.12);
+
+    const x1 = d3.scaleBand()
+      .domain(categories)
+      .range([0, x0.bandwidth()])
+      .padding(0.06);
+
+    const y = d3.scaleLinear()
+      .domain([0, d3.max(values, d => d.Value)]).nice()
+      .range([this.innerH, 0]);
+
+    const color = this.makeColorScale(categories);
+
+    // Axes (animated like the rest of the dashboard)
+    this.xAxisG.transition().duration(DURATION)
+      .call(d3.axisBottom(x0))
+      .selection()
+      .selectAll("text")
+      .style("text-anchor", "middle");
+
+    this.yAxisG.transition().duration(DURATION)
+      .call(d3.axisLeft(y));
+
+    const byAge = d3.group(values, d => d.AgeGroup);
+
+    const groups = this.g.selectAll("g.ageGroup")
+      .data(ageGroups, d => d);
+
+    const groupsEnter = groups.enter()
+      .append("g")
+      .attr("class", "ageGroup")
+      .attr("transform", d => `translate(${x0(d)},0)`);
+
+    groups.merge(groupsEnter)
+      .transition().duration(DURATION)
+      .attr("transform", d => `translate(${x0(d)},0)`);
+
+    groups.exit().remove();
+
+    const bars = this.g.selectAll("g.ageGroup")
+      .selectAll("rect")
+      .data(age => {
+        const arr = byAge.get(age) || [];
+        const map = new Map(arr.map(d => [d.Category, d.Value]));
+        return categories.map(cat => ({
+          AgeGroup: age,
+          Category: cat,
+          Value: map.get(cat) ?? 0
+        }));
+      }, d => `${d.AgeGroup}|${d.Category}`);
+
+    const barsEnter = bars.enter()
+      .append("rect")
+      .attr("x", d => x1(d.Category))
+      .attr("width", x1.bandwidth())
+      .attr("y", y(0))
+      .attr("height", 0)
+      .attr("fill", d => color(d.Category))
+      .on("mouseover", (event, d) => {
+        this.tooltip
+          .style("opacity", 1)
+          .html(`
+            <strong>Age group:</strong> ${d.AgeGroup}<br/>
+            <strong>${dimLabel}:</strong> ${d.Category}<br/>
+            <strong>Average:</strong> ${d.Value.toFixed(2)}%
+          `)
+          .style("left", `${event.pageX + TOOLTIP_OFFSET_X}px`)
+          .style("top", `${event.pageY - TOOLTIP_OFFSET_Y}px`);
+      })
+      .on("mouseout", () => this.tooltip.style("opacity", 0));
+
+    bars.merge(barsEnter)
+      .transition()
+      .duration(DURATION)
+      .attr("x", d => x1(d.Category))
+      .attr("width", x1.bandwidth())
+      .attr("y", d => y(d.Value))
+      .attr("height", d => y(0) - y(d.Value))
+      .attr("fill", d => color(d.Category));
+
+    bars.exit()
+      .transition()
+      .duration(DURATION / 2)
+      .attr("y", y(0))
+      .attr("height", 0)
+      .remove();
+
+    this.legendG.selectAll("*").remove();
+
+    const legendItems = this.legendG.selectAll("g.item")
+      .data(categories);
+
+    const li = legendItems.enter()
+      .append("g")
+      .attr("class", "item")
+      .attr("transform", (_, i) => `translate(0, ${i * 18})`);
+
+    li.append("rect")
+      .attr("width", 12)
+      .attr("height", 12)
+      .attr("y", -10)
+      .attr("rx", 2)
+      .attr("ry", 2)
+      .attr("fill", d => color(d));
+
+    li.append("text")
+      .attr("x", 16)
+      .attr("dy", "0.2em")
+      .attr("font-size", 11)
+      .text(d => d);
+  }
+}
 
 const csvParts = Array.from({ length: 15 }, (_, i) => `data/health_part${i + 1}.csv`);
 const dataService = new DataService(csvParts);
@@ -643,6 +891,8 @@ let radarChart;
 let histogramChart;
 let select;
 let choropleth;
+let groupedBarChart;
+let groupedMode = "sex";
 
 function updateYearFilterButton() {
   const btn = document.getElementById("yearFilterBtn");
@@ -681,6 +931,12 @@ function updateAll() {
   choropleth.update(
     dataService.getChoroplethData(question, selectedYear)
   );
+
+  const dimLabel = groupedMode === "sex" ? "Sex" : "Ethnicity";
+  groupedBarChart.update(
+    dataService.getGroupedBarData(question, groupedMode, selectedYear),
+    dimLabel
+  );
 }
 
 let axis, lineChart;
@@ -700,6 +956,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   const histogramSvg = d3.select("#histogramPlot");
 
   const mapSvg = d3.select("#map");
+
+  const groupedSvg = d3.select("#groupedBarChart");
+  groupedBarChart = new GroupedBarChart(groupedSvg, tooltip);
+  const dimensionSelect = document.getElementById("dimension");
+  if (dimensionSelect) {
+    groupedMode = dimensionSelect.value || "sex";
+
+    dimensionSelect.addEventListener("change", (e) => {
+      groupedMode = e.target.value;
+      updateAll();
+    });
+  }
 
   choropleth = new ChoroplethChart(mapSvg, tooltip);
   await choropleth.loadMap();

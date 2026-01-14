@@ -17,7 +17,7 @@ body {
 
 .top {
     display: grid;
-    grid-template-columns: 35% 15% 50%;
+    grid-template-columns: 7fr 3fr 10fr;
     gap: 10px;
     padding: 10px;
 }
@@ -347,4 +347,114 @@ body {
 .state.selected {
     stroke: #000;
     stroke-width: 2.5px;
+}
+
+/* Grouped Bar Chart Panel */
+
+.bar-panel {
+    padding: 8px;
+}
+
+.bar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.bar-title {
+    font-family: "Raleway", sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #222;
+    letter-spacing: 0.2px;
+}
+
+.bar-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.bar-label {
+    font-size: 0.8rem;
+    color: #444;
+}
+
+.bar-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+    border: 1px solid #c4c4c4;
+    background: #f9f9f9;
+    border-radius: 14px;
+    padding: 6px 28px 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    height: 28px;
+    line-height: 1;
+    font-family: Arial, sans-serif;
+    color: #222;
+    outline: none;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bar-select:hover {
+    background: #eee;
+}
+
+.bar-select:focus {
+    border-color: #333;
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.12);
+}
+
+.bar-controls {
+    position: relative;
+}
+
+.bar-controls::after {
+    content: "expand_more";
+    font-family: "Material Icons";
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: #777;
+    pointer-events: none;
+}
+
+#groupedBarChart {
+    flex: 1;
+    min-height: 250px;
+}
+
+#groupedBarChart text {
+    font-family: Arial, sans-serif;
+    fill: #222;
+}
+
+#groupedBarChart .axis path,
+#groupedBarChart .axis line {
+    stroke: #b9b9b9;
+}
+
+#groupedBarChart .tick line {
+    stroke: #e0e0e0;
+}
+
+#groupedBarChart .tick text {
+    fill: #555;
+    font-size: 11px;
+}
+
+#groupedBarChart .grid line {
+    stroke: #eee;
+}
+
+#groupedBarChart .legend text {
+    fill: #444;
+    font-size: 11px;
 }

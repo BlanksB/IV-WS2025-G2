@@ -59,7 +59,16 @@
             </div>
 
             <div class="panel bar-panel">
-                <svg id="barChart"></svg>
+                <div class="panel-header bar-header">
+                    <div class="bar-controls">
+                        <label for="dimension" class="bar-label">Group by</label>
+                        <select id="dimension" class="bar-select" aria-label="Group bar chart by">
+                            <option value="sex" selected>Sex</option>
+                            <option value="ethnicity">Ethnicity</option>
+                        </select>
+                    </div>
+                </div>
+                <svg id="groupedBarChart"></svg>
             </div>
 
         </section>
