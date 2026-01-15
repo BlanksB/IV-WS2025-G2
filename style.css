@@ -58,8 +58,11 @@ body {
 
 .stats-panel {
     display: grid;
-    grid-template-rows: repeat(4, 1fr);
+    grid-template-rows: repeat(3, auto);
     gap: 8px;
+    justify-content: center;
+    align-content: center;
+    height: 100%;
 }
 
 .stat-box {
@@ -68,6 +71,9 @@ body {
     text-align: center;
     padding: 10px;
     font-size: 0.9rem;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
 }
 
 .header {

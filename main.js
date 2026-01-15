@@ -996,8 +996,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     .style("opacity", 0);
 
   const ABOUT_TEXT =
-    "This dashboard explores CDC Behavioral Risk Factor Surveillance System (BRFSS) indicators related to Alzheimer’s Disease and Healthy Aging.<br><br>" +
-    "Select a question to compare trends over time and differences across demographics, and click the map or charts to filter the views.<br><br>" +
+    "This dashboard explores CDC Behavioral Risk Factor Surveillance System (BRFSS) indicators related to Alzheimer’s Disease and Healthy Aging.<br>" +
+    "Select a question to compare trends over time and differences across demographics, and click the map or charts to filter the views.<br>" +
     "Source: CDC Alzheimer’s Disease and Healthy Aging Data (BRFSS).";
 
   d3.select(".info-icon")
