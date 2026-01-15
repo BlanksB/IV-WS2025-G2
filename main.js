@@ -444,6 +444,10 @@ class HistogramChart {
     this.width = svg.node().getBoundingClientRect().width;
     this.height = svg.node().getBoundingClientRect().height;
 
+    this.svg
+      .attr("viewBox", `0 0 ${this.width} ${this.height}`)
+      .attr("preserveAspectRatio", "none");
+
     this.margin = { top: 30, right: 30, bottom: 60, left: 70 };
     this.innerWidth = this.width - this.margin.left - this.margin.right;
     this.innerHeight = this.height - this.margin.top - this.margin.bottom;
@@ -692,7 +696,6 @@ class ChoroplethChart {
 
 }
 
-//
 
 class GroupedBarChart {
   constructor(svg, tooltip) {
@@ -757,7 +760,38 @@ class GroupedBarChart {
       .range(blues);
   }
 
+  resize() {
+    const node = this.svg.node();
+    if (!node) return;
+
+    const { width, height } = node.getBoundingClientRect();
+
+    if (!width || !height) return;
+
+    this.width = width;
+    this.height = height;
+
+    this.innerW = this.width - this.margin.left - this.margin.right;
+    this.innerH = this.height - this.margin.top - this.margin.bottom;
+
+    this.svg.attr("viewBox", `0 0 ${this.width} ${this.height}`);
+
+    this.g.attr("transform", `translate(${this.margin.left},${this.margin.top})`);
+    this.xAxisG.attr("transform", `translate(0,${this.innerH})`);
+
+    this.yLabel
+      .attr("x", -this.height / 2);
+
+    this.xLabel
+      .attr("x", this.margin.left + (this.innerW / 2))
+      .attr("y", this.margin.top + this.innerH + 55);
+
+    this.legendG
+      .attr("transform", `translate(${this.margin.left + this.innerW + 18}, ${this.margin.top})`);
+  }
+
   update(payload, dimLabel) {
+    this.resize();
     const { ageGroups, categories, values } = payload;
 
     // Clear if no data
@@ -788,7 +822,6 @@ class GroupedBarChart {
 
     const color = this.makeColorScale(categories);
 
-    // Axes (animated like the rest of the dashboard)
     this.xAxisG.transition().duration(DURATION)
       .call(d3.axisBottom(x0))
       .selection()
@@ -916,7 +949,7 @@ function updateStratFilterButton() {
 
 function updateMapFilterButton() {
   const btn = document.getElementById("mapFilterBtn");
-  const isActive = selectedState !== null;       // ✅ filter truth
+  const isActive = selectedState !== null;
   btn.textContent = isActive ? String(selectedStateName ?? selectedState) : "–";
   btn.classList.toggle("active", isActive);
 }
@@ -952,6 +985,8 @@ let axis, lineChart;
 
 document.addEventListener("DOMContentLoaded", async () => {
   await dataService.load();
+
+  window.addEventListener("resize", () => updateAll());
 
   select = document.getElementById("questionSelect");
 
