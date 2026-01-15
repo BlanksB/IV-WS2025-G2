@@ -314,7 +314,7 @@ class LineChart {
       })
       .on("mouseout", () => this.tooltip.style("opacity", 0))
       .on("click", (_, d) => {
-        selectedYear = d.YearStart;
+        selectedYear = (selectedYear === d.YearStart) ? null : d.YearStart;
         updateYearFilterButton();
         updateAll();
       })
@@ -417,7 +417,7 @@ class RadarChart {
         .classed("selected", d.label === selectedStratification)
         .text(d.label)
         .on("click", () => {
-          selectedStratification = d.label;
+          selectedStratification = (selectedStratification === d.label) ? null : d.label;
           updateStratFilterButton();
           updateAll();
         });
@@ -538,14 +538,12 @@ class ChoroplethChart {
 
     this.legendG = svg.append("g")
       .attr("class", "legend")
-      .attr("transform", `translate(${this.width - 60}, 40)`);
+      .attr("transform", `translate(${this.width - 50}, 40)`);
 
     this.legendHeight = 160;
     this.legendWidth = 12;
 
-    this.projection = d3.geoAlbersUsa()
-      .translate([this.width / 2, this.height / 2])
-      .scale(Math.min(this.width, this.height) * 1.2);
+    this.projection = d3.geoAlbersUsa();
 
     this.path = d3.geoPath(this.projection);
 
@@ -559,6 +557,16 @@ class ChoroplethChart {
 
     this.states = topojson.feature(us, us.objects.states).features;
     console.log(this.states)
+
+    const padding = 10;
+    this.projection.fitExtent(
+      [[padding, padding], [this.width - padding, this.height - padding]],
+      { type: "FeatureCollection", features: this.states }
+    );
+    const [tx, ty] = this.projection.translate();
+    this.projection.translate([tx - 30, ty]);
+
+    this.path = d3.geoPath(this.projection);
 
     this.statePaths = this.g.selectAll("path.state")
       .data(this.states)
@@ -896,20 +904,21 @@ let groupedMode = "sex";
 
 function updateYearFilterButton() {
   const btn = document.getElementById("yearFilterBtn");
-  btn.textContent = selectedYear ?? "–";
+  btn.textContent = selectedYear === null ? "–" : String(selectedYear);
   btn.classList.toggle("active", selectedYear !== null);
 }
 
 function updateStratFilterButton() {
   const btn = document.getElementById("radarFilterBtn");
-  btn.textContent = selectedStratification ?? "–";
+  btn.textContent = selectedStratification === null ? "–" : String(selectedStratification);
   btn.classList.toggle("active", selectedStratification !== null);
 }
 
 function updateMapFilterButton() {
   const btn = document.getElementById("mapFilterBtn");
-  btn.textContent = selectedStateName ?? "–";
-  btn.classList.toggle("active", selectedStateName !== null);
+  const isActive = selectedState !== null;       // ✅ filter truth
+  btn.textContent = isActive ? String(selectedStateName ?? selectedState) : "–";
+  btn.classList.toggle("active", isActive);
 }
 
 
@@ -950,6 +959,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     .append("div")
     .attr("class", "tooltip")
     .style("opacity", 0);
+
+  const ABOUT_TEXT =
+    "This dashboard explores CDC Behavioral Risk Factor Surveillance System (BRFSS) indicators related to Alzheimer’s Disease and Healthy Aging.<br><br>" +
+    "Select a question to compare trends over time and differences across demographics, and click the map or charts to filter the views.<br><br>" +
+    "Source: CDC Alzheimer’s Disease and Healthy Aging Data (BRFSS).";
+
+  d3.select(".info-icon")
+    .on("mouseover", (event) => {
+      tooltip
+        .style("opacity", 1)
+        .html(ABOUT_TEXT)
+        .style("left", `${event.pageX + TOOLTIP_OFFSET_X}px`)
+        .style("top", `${event.pageY - TOOLTIP_OFFSET_Y}px`);
+    })
+    .on("mousemove", (event) => {
+      tooltip
+        .style("left", `${event.pageX + TOOLTIP_OFFSET_X}px`)
+        .style("top", `${event.pageY - TOOLTIP_OFFSET_Y}px`);
+    })
+    .on("mouseout", () => {
+      tooltip.style("opacity", 0);
+    });
+
 
   const lineSvg = d3.select("#lineChart");
   const radarSvg = d3.select("#radarChart");
@@ -1007,6 +1039,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   d3.select("#mapFilterBtn").on("click", () => {
     selectedState = null;
+    selectedStateName = null;
     updateMapFilterButton();
     updateAll();
   });
